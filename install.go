@@ -55,7 +55,9 @@ func installService(name, desc string) error {
 	s, err := m.OpenService(name)
 	if err == nil {
 		s.Close()
-		return fmt.Errorf("service %s already exists", name)
+		fmt.Printf("service %s already exists, attempting to start if stopped", name)
+		startService(name)
+		return nil
 	}
 	s, err = m.CreateService(name, exepath, mgr.Config{DisplayName: desc}, "is", "auto-started")
 	if err != nil {
@@ -67,6 +69,7 @@ func installService(name, desc string) error {
 		s.Delete()
 		return fmt.Errorf("SetupEventLogSource() failed: %s", err)
 	}
+	startService(name)
 	return nil
 }
 
