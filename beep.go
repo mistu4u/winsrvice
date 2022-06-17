@@ -8,7 +8,12 @@
 package main
 
 import (
+	"fmt"
+	"os/exec"
+	"sync"
 	"syscall"
+
+	"golang.org/x/sys/windows/svc/debug"
 )
 
 // BUG(brainman): MessageBeep Windows api is broken on Windows 7,
@@ -20,4 +25,37 @@ var (
 
 func beep() {
 	beepFunc.Call(0xffffffff)
+}
+
+type StateStruct struct {
+	sync.Mutex
+	Desc string
+}
+
+var State *StateStruct
+
+func (s *StateStruct) set(desc string) {
+	s.Lock()
+	defer s.Unlock()
+	s.Desc = desc
+}
+func (s *StateStruct) read() string {
+	s.Lock()
+	defer s.Unlock()
+	return s.Desc
+}
+
+func run(elog debug.Log) {
+	cmd := exec.Command("C:\\Users\\Subir\\be\\go\\cobra\\cobra.exe", "run")
+	stdout, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Print the output
+	fmt.Println(string(stdout))
+	elog.Info(1, string(stdout))
+	State.set("not running")
 }

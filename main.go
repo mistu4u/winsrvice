@@ -66,11 +66,12 @@ func main() {
 		err = controlService(svcName, svc.Pause, svc.Paused)
 	case "continue":
 		err = controlService(svcName, svc.Continue, svc.Running)
+	/*case "restart":
+	err = restartService(svcName, svc.Stop, svc.Stopped) */
 	default:
 		usage(fmt.Sprintf("invalid command %s", cmd))
 	}
 	if err != nil {
 		log.Fatalf("failed to %s %s: %v", cmd, svcName, err)
 	}
-	return
 }
