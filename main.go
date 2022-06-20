@@ -62,12 +62,13 @@ func main() {
 		err = startService(svcName)
 	case "stop":
 		err = controlService(svcName, svc.Stop, svc.Stopped)
+		killAvailxAgentInWindows(COBRAEXE)
 	case "pause":
 		err = controlService(svcName, svc.Pause, svc.Paused)
 	case "continue":
 		err = controlService(svcName, svc.Continue, svc.Running)
 	/*case "restart":
-	err = restartService(svcName, svc.Stop, svc.Stopped) */
+	err = restartService(svcName, svc.Stop, svc.Stopped)*/
 	default:
 		usage(fmt.Sprintf("invalid command %s", cmd))
 	}

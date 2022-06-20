@@ -9,6 +9,7 @@ package main
 
 import (
 	"fmt"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -35,11 +36,13 @@ loop:
 	for {
 		select {
 		case <-tick:
+			//Run when the process is not running and hasn't poreviously errored out
 			if State.read() == "not running" {
-				State.set("running")
-				go run(elog)
+				if !State.IsFailure {
+					State.set("running")
+					go run(elog)
+				}
 			}
-		// elog.Info(1, "beep")
 		case c := <-r:
 			switch c.Cmd {
 			case svc.Interrogate:
@@ -48,7 +51,9 @@ loop:
 				time.Sleep(100 * time.Millisecond)
 				changes <- c.CurrentStatus
 			case svc.Stop, svc.Shutdown:
-				// golang.org/x/sys/windows/svc.TestExample is verifying this output.
+				//forcefully stop the availx thread
+				killAvailxAgentInWindows(COBRAEXE)
+				//golang.org/x/sys/windows/svc.TestExample is verifying this output.
 				testOutput := strings.Join(args, "-")
 				testOutput += fmt.Sprintf("-%d", c.Context)
 				elog.Info(1, testOutput)
@@ -91,4 +96,21 @@ func runService(name string, isDebug bool) {
 		return
 	}
 	elog.Info(1, fmt.Sprintf("%s service stopped", name))
+}
+
+func killAvailxAgentInWindows(processName string) {
+	elog, err := eventlog.Open(SVCNAME)
+	if err != nil {
+		fmt.Errorf("debug log could not be opened %w", err.Error())
+	}
+	//first try to kill gracefully
+	kill := exec.Command("TASKKILL", "/IM", processName, "/F", "/T")
+	err = kill.Run()
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if exitError.ExitCode() != 0 {
+				elog.Info(1, fmt.Sprintf("%v", exitError.ExitCode()))
+			}
+		}
+	}
 }

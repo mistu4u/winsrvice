@@ -9,8 +9,8 @@
             "type": "go",
             "request": "launch",
             "mode": "debug",
-            "program": "C:\\Users\\Subir\\be\\go\\winsrvice\\",
-            "args": ["restart"],
+            "program": "C:\\Users\\Subir\\be\\go\\winsrvice",
+            "args": ["stop"],
             "showLog": true
         }
     ]

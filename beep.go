@@ -13,6 +13,7 @@ import (
 	"sync"
 	"syscall"
 
+	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
 )
 
@@ -29,7 +30,8 @@ func beep() {
 
 type StateStruct struct {
 	sync.Mutex
-	Desc string
+	Desc      string
+	IsFailure bool
 }
 
 var State *StateStruct
@@ -46,16 +48,21 @@ func (s *StateStruct) read() string {
 }
 
 func run(elog debug.Log) {
+	State.IsFailure = false
 	cmd := exec.Command("C:\\Users\\Subir\\be\\go\\cobra\\cobra.exe", "run")
-	stdout, err := cmd.Output()
+	stdout, err := cmd.CombinedOutput()
 
 	if err != nil {
-		fmt.Println(err.Error())
-		return
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if exitError.ExitCode() != 0 {
+				//update the service status to stopped
+				err = controlService(SVCNAME, svc.Stop, svc.Stopped)
+				elog.Info(1, fmt.Sprintf("error in stopping service: %v", err))
+				State.IsFailure = true
+				elog.Info(1, fmt.Sprintf("%v", exitError))
+			}
+		}
 	}
-
-	// Print the output
-	fmt.Println(string(stdout))
 	elog.Info(1, string(stdout))
 	State.set("not running")
 }
