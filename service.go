@@ -56,7 +56,7 @@ loop:
 			if State.read() == "not running" {
 				if !State.IsFailure {
 					State.set("running")
-					go run(elog, config["availxExePath"].(string))
+					go run(elog, config["availxExePath"].(string), config["upgradeWaitTime"].(int))
 				}
 			}
 		case c := <-r:

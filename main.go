@@ -77,31 +77,3 @@ func main() {
 		log.Fatalf("failed to %s %s: %v", cmd, svcName, err)
 	}
 }
-
-/*func readConfig1() (*Config, error) {
-	// Set the file name of the configurations file
-	v := viper.New()
-	v.SetConfigName("winservice")
-
-	// Set the configuration file type
-	v.SetConfigType("yaml")
-
-	// Set the path to look for the configurations file
-	//v.AddConfigPath("./config")
-	v.AddConfigPath("C://pythian//availxhome//config") // or viper.SetConfigFile("config/config"), doesn't matter
-	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			// Config file not found; ignore error if desired
-			return nil, errors.New("config file not found, service can not be operated")
-		} else {
-			return nil, err
-		}
-	}
-	Conf = &Config{}
-	err := v.Unmarshal(Conf)
-	if err != nil {
-		return nil, err
-	}
-
-	return Conf, err
-}*/

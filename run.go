@@ -11,22 +11,11 @@ import (
 	"fmt"
 	"os/exec"
 	"sync"
-	"syscall"
+	"time"
 
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
 )
-
-// BUG(brainman): MessageBeep Windows api is broken on Windows 7,
-// so this example does not beep when runs as service on Windows 7.
-
-var (
-	beepFunc = syscall.MustLoadDLL("user32.dll").MustFindProc("MessageBeep")
-)
-
-func beep() {
-	beepFunc.Call(0xffffffff)
-}
 
 type StateStruct struct {
 	sync.Mutex
@@ -47,7 +36,7 @@ func (s *StateStruct) read() string {
 	return s.Desc
 }
 
-func run(elog debug.Log, path string) {
+func run(elog debug.Log, path string, waitTime int) {
 	State.IsFailure = false
 	cmd := exec.Command(path, "run")
 	stdout, err := cmd.CombinedOutput()
@@ -55,11 +44,18 @@ func run(elog debug.Log, path string) {
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if exitError.ExitCode() != 0 {
+				if exitError.ExitCode() == 2 {
+					//availx agent got upgraded
+					State.IsFailure = false
+					elog.Info(1, fmt.Sprintf("exe upgraded, going to wait for %d minutes to start it", waitTime))
+					time.Sleep(time.Duration(waitTime) * time.Second)
+					runService(SVCNAME, true)
+				}
 				//update the service status to stopped
 				err = controlService(SVCNAME, svc.Stop, svc.Stopped)
-				elog.Info(1, fmt.Sprintf("error in stopping service: %v", err))
+				elog.Error(1, fmt.Sprintf("error in stopping service: %v", err))
 				State.IsFailure = true
-				elog.Info(1, fmt.Sprintf("%v", exitError))
+				elog.Error(1, fmt.Sprintf("fatal occurred : %v", exitError))
 			}
 		}
 	}
