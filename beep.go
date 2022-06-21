@@ -47,9 +47,9 @@ func (s *StateStruct) read() string {
 	return s.Desc
 }
 
-func run(elog debug.Log) {
+func run(elog debug.Log, path string) {
 	State.IsFailure = false
-	cmd := exec.Command("C:\\Users\\Subir\\be\\go\\cobra\\cobra.exe", "run")
+	cmd := exec.Command(path, "run")
 	stdout, err := cmd.CombinedOutput()
 
 	if err != nil {

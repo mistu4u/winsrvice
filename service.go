@@ -9,6 +9,9 @@ package main
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"log"
 	"os/exec"
 	"strings"
 	"time"
@@ -18,7 +21,15 @@ import (
 	"golang.org/x/sys/windows/svc/eventlog"
 )
 
-var elog debug.Log
+type Config struct {
+	upgradeWaitTime int
+	availxExePath   string
+}
+
+var (
+	elog debug.Log
+	Conf Config
+)
 
 type myservice struct{}
 
@@ -32,15 +43,20 @@ func (m *myservice) Execute(args []string, r <-chan svc.ChangeRequest, changes c
 	StateVar := StateStruct{}
 	State = &StateVar
 	State.set("not running")
+	elog.Info(1, "Execute command working")
+	config, err := readCofigYaml()
+	if err != nil {
+		elog.Error(1, fmt.Sprintf("config file could not be read: %v", err))
+	}
 loop:
 	for {
 		select {
 		case <-tick:
-			//Run when the process is not running and hasn't poreviously errored out
+			//Run when the process is not running and hasn't previously errored out
 			if State.read() == "not running" {
 				if !State.IsFailure {
 					State.set("running")
-					go run(elog)
+					go run(elog, config["availxExePath"].(string))
 				}
 			}
 		case c := <-r:
@@ -113,4 +129,19 @@ func killAvailxAgentInWindows(processName string) {
 			}
 		}
 	}
+}
+
+func readCofigYaml() (map[interface{}]interface{}, error) {
+	yamlFile, err := ioutil.ReadFile("C://pythian//availxhome//config//winservice.yaml")
+	if err != nil {
+		elog.Info(1, fmt.Sprintf("yamlFile.Get err   #%v ", err))
+	}
+	//var c Config
+	data := make(map[interface{}]interface{})
+	err = yaml.Unmarshal(yamlFile, &data)
+	if err != nil {
+		log.Fatalf("Unmarshal: %v", err)
+	}
+
+	return data, nil
 }
