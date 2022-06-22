@@ -42,7 +42,7 @@ func main() {
 		log.Fatalf("failed to determine if we are running in service: %v", err)
 	}
 	if inService {
-		runService(svcName, false)
+		runAgent(svcName, false)
 		return
 	}
 
@@ -53,7 +53,7 @@ func main() {
 	cmd := strings.ToLower(os.Args[1])
 	switch cmd {
 	case "debug":
-		runService(svcName, true)
+		runAgent(svcName, true)
 		return
 	case "install":
 		err = installService(svcName, "my service")

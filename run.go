@@ -49,7 +49,7 @@ func run(elog debug.Log, path string, waitTime int) {
 					State.IsFailure = false
 					elog.Info(1, fmt.Sprintf("exe upgraded, going to wait for %d minutes to start it", waitTime))
 					time.Sleep(time.Duration(waitTime) * time.Second)
-					runService(SVCNAME, true)
+					runAgent(SVCNAME, true)
 				}
 				//update the service status to stopped
 				err = controlService(SVCNAME, svc.Stop, svc.Stopped)

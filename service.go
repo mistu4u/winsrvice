@@ -89,7 +89,7 @@ loop:
 	return
 }
 
-func runService(name string, isDebug bool) {
+func runAgent(name string, isDebug bool) {
 	var err error
 	if isDebug {
 		elog = debug.New(name)
