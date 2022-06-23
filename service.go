@@ -9,10 +9,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/shirou/gopsutil/process"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -53,10 +53,12 @@ loop:
 		select {
 		case <-tick:
 			//Run when the process is not running and hasn't previously errored out
+			//elog.Info(1, fmt.Sprintf("pid inside tick %v", Pid))
 			if State.read() == "not running" {
 				if !State.IsFailure {
 					State.set("running")
-					go run(elog, config["availxExePath"].(string), config["upgradeWaitTime"].(int))
+					elog.Info(1, "inside tick, running")
+					go run(elog, config[AVAILX_EXE_PATH].(string), config[UPGRADE_WAIT_TIME].(int))
 				}
 			}
 		case c := <-r:
@@ -68,7 +70,8 @@ loop:
 				changes <- c.CurrentStatus
 			case svc.Stop, svc.Shutdown:
 				//forcefully stop the availx thread
-				killAvailxAgentInWindows(COBRAEXE)
+				elog.Info(1, fmt.Sprintf("pid before stop %v", Pid))
+				killAvailxAgentInWindows(Pid)
 				//golang.org/x/sys/windows/svc.TestExample is verifying this output.
 				testOutput := strings.Join(args, "-")
 				testOutput += fmt.Sprintf("-%d", c.Context)
@@ -114,18 +117,54 @@ func runAgent(name string, isDebug bool) {
 	elog.Info(1, fmt.Sprintf("%s service stopped", name))
 }
 
-func killAvailxAgentInWindows(processName string) {
-	elog, err := eventlog.Open(SVCNAME)
-	if err != nil {
-		fmt.Errorf("debug log could not be opened %w", err.Error())
-	}
-	//first try to kill gracefully
-	kill := exec.Command("TASKKILL", "/IM", processName, "/F", "/T")
-	err = kill.Run()
-	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			if exitError.ExitCode() != 0 {
-				elog.Info(1, fmt.Sprintf("%v", exitError.ExitCode()))
+func killAvailxAgentInWindows(lpid int32) {
+	//conf, _ := readCofigYaml()
+	//fmt.Println(conf["availxExePath"])
+	elog, _ = eventlog.Open(SVCNAME)
+	defer elog.Close()
+	//file, err := ioutil.ReadFile(conf["availxExePath"].(string) + "msw.lock")
+	//if err != nil {
+	//	elog.Error(1, fmt.Sprintf("Pid value was not retrieved from the file %v", err.Error()))
+	//}
+	//i, _ := strconv.Atoi(string(file))
+	//Pid = int32(i)
+	elog.Info(1, fmt.Sprintf("pid value received in kill is %v", lpid))
+	if lpid == 0 {
+		elog.Error(1, "Pid value can not be zero")
+		return
+	} else {
+		elog.Info(1, fmt.Sprintf("pid value received is %v", lpid))
+		p, err := process.NewProcess(lpid)
+		if err != nil {
+			elog.Error(1, fmt.Sprintf("error while getting process details %v", err.Error()))
+		}
+		err = p.Terminate()
+		if err != nil {
+			elog.Error(1, fmt.Sprintf("error while killing the agent %v", err.Error()))
+		}
+		//check if the PID still exists
+		//Check for 30 seconds if the service is still running or not
+		currTime := time.Now()
+		stopTime := time.Now().Add(11 * time.Second)
+		var exists bool
+		for currTime.Before(stopTime) {
+			exists, err = process.PidExists(lpid)
+			if err != nil {
+				elog.Error(1, fmt.Sprintf("could not check if process still exists %v", err.Error()))
+				break
+			}
+			if !exists {
+				break
+			}
+			time.Sleep(1 * time.Second)
+			currTime = time.Now()
+		}
+		if exists {
+			err := p.Kill()
+			if err != nil {
+				elog.Error(1, fmt.Sprintf("process could not be force killed %v", err.Error()))
+			} else {
+				elog.Info(1, fmt.Sprintf("process was force killed %v", err.Error()))
 			}
 		}
 	}

@@ -34,15 +34,14 @@ func usage(errmsg string) {
 }
 
 func main() {
-	const svcName = "myservice"
 	conf, _ := readCofigYaml()
-	fmt.Println(conf["availxExePath"])
+	fmt.Println(conf[AVAILX_EXE_PATH])
 	inService, err := svc.IsWindowsService()
 	if err != nil {
 		log.Fatalf("failed to determine if we are running in service: %v", err)
 	}
 	if inService {
-		runAgent(svcName, false)
+		runAgent(SVCNAME, false)
 		return
 	}
 
@@ -53,27 +52,28 @@ func main() {
 	cmd := strings.ToLower(os.Args[1])
 	switch cmd {
 	case "debug":
-		runAgent(svcName, true)
+		runAgent(SVCNAME, true)
 		return
 	case "install":
-		err = installService(svcName, "my service")
+		err = installService(SVCNAME, SVC_DESC)
 	case "remove":
-		err = removeService(svcName)
+		err = removeService(SVCNAME)
 	case "start":
-		err = startService(svcName)
-	case "stop":
-		err = controlService(svcName, svc.Stop, svc.Stopped)
-		killAvailxAgentInWindows(COBRAEXE)
+		err = startService(SVCNAME)
+		//Stopping the service from the cli is disabled
+	/*case "stop":
+	err = controlService(svcName, svc.Stop, svc.Stopped)
+	killAvailxAgentInWindows(true)
 	case "pause":
-		err = controlService(svcName, svc.Pause, svc.Paused)
+		err = controlService(SVCNAME, svc.Pause, svc.Paused)
 	case "continue":
-		err = controlService(svcName, svc.Continue, svc.Running)
+		err = controlService(SVCNAME, svc.Continue, svc.Running)
 	/*case "restart":
 	err = restartService(svcName, svc.Stop, svc.Stopped)*/
 	default:
 		usage(fmt.Sprintf("invalid command %s", cmd))
 	}
 	if err != nil {
-		log.Fatalf("failed to %s %s: %v", cmd, svcName, err)
+		log.Fatalf("failed to %s %s: %v", cmd, SVCNAME, err)
 	}
 }

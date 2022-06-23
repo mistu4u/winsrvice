@@ -24,6 +24,7 @@ type StateStruct struct {
 }
 
 var State *StateStruct
+var Pid int32
 
 func (s *StateStruct) set(desc string) {
 	s.Lock()
@@ -37,12 +38,19 @@ func (s *StateStruct) read() string {
 }
 
 func run(elog debug.Log, path string, waitTime int) {
+	elog.Info(1, "inside run function")
 	State.IsFailure = false
-	cmd := exec.Command(path, "run")
-	stdout, err := cmd.CombinedOutput()
-	//Get the pid of the agent
-	pid := cmd.Process.Pid
-	elog.Info(1, fmt.Sprintf("after start, pid %v created", pid))
+	cmd := exec.Command(path+COBRAEXE, "run")
+	err := cmd.Start()
+	//Get the Pid of the agent
+	Pid = int32(cmd.Process.Pid)
+	elog.Info(1, fmt.Sprintf("after start, Pid %v created", Pid))
+	//populating the pid locally
+	//err = ioutil.WriteFile(path+"msw.lock", []byte(strconv.Itoa(int(Pid))), fs.ModePerm)
+	//if err != nil {
+	//	elog.Info(1, fmt.Sprintf("pid could not be stored in the file %v", err.Error()))
+	//}
+	err = cmd.Wait()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if exitError.ExitCode() != 0 {
@@ -66,6 +74,6 @@ func run(elog debug.Log, path string, waitTime int) {
 			}
 		}
 	}
-	elog.Info(1, string(stdout))
+	elog.Info(1, "process completed")
 	State.set("not running")
 }
